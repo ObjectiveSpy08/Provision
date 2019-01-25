@@ -41,6 +41,8 @@ class DigitalOceanProvider
 			for( let region of response.body.regions)
 			{
 				// Print out
+
+				console.log(`region ${region.name}, ${region.slug}`);
 			}
 		}
 
@@ -53,6 +55,25 @@ class DigitalOceanProvider
 	async listImages( )
 	{
 		// HINT: Add this to the end to get better filter results: ?type=distribution&per_page=100
+		let response = await got('https://api.digitalocean.com/v2/images?type=distribution&per_page=100', { headers: headers, json:true })
+							 .catch(err => console.error(`listRegions ${err}`));
+							 
+		if( !response ) return;
+		console.log("Images in nyc2: ");
+		if( response.body.images )
+		{
+			let images = response.body.images.filter(image => image.status === "available" && image.regions.includes("nyc2"));
+			for( let image of images)
+			{
+				// Print out
+				console.log(`image: ${image.distribution}`);
+			}
+		}
+
+		if( response.headers )
+		{
+			console.log( chalk.yellow(`Calls remaining ${response.headers["ratelimit-remaining"]}`) );
+		}
 	}
 
 	async createDroplet (dropletName, region, imageName )
@@ -78,24 +99,24 @@ class DigitalOceanProvider
 
 		console.log("Attempting to create: "+ JSON.stringify(data) );
 
-		// let response = await got.post("https://api.digitalocean.com/v2/droplets", 
-		// {
-		// 	headers:headers,
-		// 	json:true,
-		// 	body: data
-		// }).catch( err => 
-		// 	console.error(chalk.red(`createDroplet: ${err}`)) 
-		// );
+		let response = await got.post("https://api.digitalocean.com/v2/droplets", 
+		{
+			headers:headers,
+			json:true,
+			body: data
+		}).catch( err => 
+			console.error(chalk.red(`createDroplet: ${err}`)) 
+		);
 
-		// if( !response ) return;
+		if( !response ) return;
 
-		// console.log(response.statusCode);
-		// console.log(response.body);
+		console.log(response.statusCode);
+		console.log(response.body);
 
-		// if(response.statusCode == 202)
-		// {
-		// 	console.log(chalk.green(`Created droplet id ${response.body.droplet.id}`));
-		// }
+		if(response.statusCode == 202)
+		{
+			console.log(chalk.green(`Created droplet id ${response.body.droplet.id}`));
+		}
 	}
 
 	async dropletInfo (id)
@@ -107,6 +128,8 @@ class DigitalOceanProvider
 		}
 
 		// Make REST request
+		let response = await got('https://api.digitalocean.com/v2/droplets/'+id, { headers: headers, json:true })
+							 .catch(err => console.error(`listRegions ${err}`));
 
 		if( !response ) return;
 
@@ -114,8 +137,10 @@ class DigitalOceanProvider
 		{
 			let droplet = response.body.droplet;
 			console.log(droplet);
-
+			console.log(droplet.networks.v4[0].ip_address);
+		//	console.log(droplet.networks.v6[0].ip_address);
 			// Print out IP address
+
 		}
 
 	}
@@ -129,6 +154,14 @@ class DigitalOceanProvider
 		}
 
 		// HINT, use the DELETE verb.
+		let response = await got.delete("https://api.digitalocean.com/v2/droplets/"+id, 
+		{
+			headers:headers,
+			json:true
+		}).catch( err => 
+			console.error(chalk.red(`deleteDroplet: ${err}`)) 
+		);
+
 
 		if( !response ) return;
 
@@ -153,7 +186,7 @@ async function provision()
 	// Comment out when completed.
 	// https://developers.digitalocean.com/documentation/v2/#list-all-regions
 	// use 'slug' property
-	await client.listRegions();
+	// await client.listRegions();
 
 	// #############################################
 	// #2 Extend the client object to have a listImages method
@@ -167,13 +200,13 @@ async function provision()
 	// #3 Create an droplet with the specified name, region, and image
 	// Comment out when completed. ONLY RUN ONCE!!!!!
 	var name = "UnityId"+os.hostname();
-	var region = ""; // Fill one in from #1
-	var image = ""; // Fill one in from #2
-	// await client.createDroplet(name, region, image);
+	var region = "nyc3"; // Fill one in from #1
+	var image = "ubuntu-16-04-x64"; // Fill one in from #2
+	//await client.createDroplet(name, region, image);
 
 	// Record the droplet id that you see print out in a variable.
 	// We will use this to interact with our droplet for the next steps.
-	// var dropletId = <id from step number 3>;
+	var dropletId = 128883205;
 
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// BEFORE MOVING TO STEP FOR, REMEMBER TO COMMENT OUT THE `createDroplet()` call!!!
@@ -184,16 +217,17 @@ async function provision()
 	// https://developers.digitalocean.com/documentation/v2/#retrieve-an-existing-droplet-by-id
 	// REMEMBER POST != GET
 	// Most importantly, print out IP address!
-	// await client.dropletInfo(dropletId);
+	//await client.dropletInfo(dropletId);
 	
 	// #############################################
 	// #5 In the command line, ping your server, make sure it is alive!
-	// ping xx.xx.xx.xx
+	// ping 104.248.14.151
+
 
 	// #############################################
 	// #6 Extend the client to DESTROY the specified droplet.
 	// https://developers.digitalocean.com/documentation/v2/#delete-a-droplet
-	// await client.deleteDroplet(dropletId);
+	await client.deleteDroplet(dropletId);
 
 	// #############################################
 	// #7 In the command line, ping your server, make sure it is dead!
